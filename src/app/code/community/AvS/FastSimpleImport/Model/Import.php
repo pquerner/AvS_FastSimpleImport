@@ -33,8 +33,15 @@
  */
 class AvS_FastSimpleImport_Model_Import extends Mage_ImportExport_Model_Import
 {
-    protected function _construct()
+    /**
+     * @var object|null | Model of the Entity Adapter (default AvS_FastSimpleImport_Model_Import_Entity_Product)
+     */
+    protected $entityAdapter = NULL;
+    protected function _construct($entityAdapter = NULL)
     {
+        if($entityAdapter === NULL) {
+            $this->entityAdapter = $this->setEntityAdapter(Mage::getModel('fastsimpleimport/import_entity_product'));
+        }
         //Fix for issue #50
         Mage::getSingleton('catalog/product')->getResource()->unsetAttributes();
 
@@ -51,6 +58,43 @@ class AvS_FastSimpleImport_Model_Import extends Mage_ImportExport_Model_Import
         $this->setDisablePreprocessImageData(Mage::getStoreConfigFlag('fastsimpleimport/product/disable_preprocess_images'));
         $this->setUnsetEmptyFields(! Mage::getStoreConfigFlag('fastsimpleimport/general/clear_field_on_empty_string'));
         $this->setSymbolEmptyFields(Mage::getStoreConfig('fastsimpleimport/general/symbol_for_clear_field'));
+    }
+
+//    /**
+//     * Sets the entity adapter
+//     * @param \AvS_FastSimpleImport_Model_Import_Entity_Product $entityAdapter
+//     *
+//
+//     * @throws \Exception
+//     * @return \AvS_FastSimpleImport_Model_Import
+//     */
+//    protected function setEntityAdapter(AvS_FastSimpleImport_Model_Import_Entity_Product $entityAdapter) {
+//        if($this->entityAdapter === NULL) {
+//            if(is_object($entityAdapter)) {
+//                if($entityAdapter instanceof AvS_FastSimpleImport_Model_Import_Entity_Product) {
+//                    $this->entityAdapter = $entityAdapter;
+//                } else {
+//                    throw new Exception('Given object is of type ' . get_class($entityAdapter) . ' expected class AvS_FastSimpleImport_Model_Import_Entity_Product');
+//                }
+//            } else {
+//                throw new Exception('Given parameter is no object.');
+//            }
+//        }
+//        return $this;
+//    }
+
+//    /**
+//     * @return mixed
+//     */
+//    protected function getEntityAdapter() {
+//        return $this->getEntityAdapter();
+//    }
+
+    /**
+     * @return mixed
+     */
+    public function getIndexValueAttributes(){
+        return $this->getEntityAdapter()->getIndexValueAttributes();
     }
 
     /**
@@ -75,7 +119,7 @@ class AvS_FastSimpleImport_Model_Import extends Mage_ImportExport_Model_Import
         $partialIndexing = $this->getPartialIndexing();
 
         /** @var $entityAdapter AvS_FastSimpleImport_Model_Import_Entity_Product */
-        $entityAdapter = Mage::getModel('fastsimpleimport/import_entity_product');
+        $entityAdapter = $this->getEntityAdapter();
         $entityAdapter->setBehavior($this->getBehavior());
         $entityAdapter->setIsDryRun(false);
         $entityAdapter->setErrorLimit($this->getErrorLimit());
@@ -86,6 +130,7 @@ class AvS_FastSimpleImport_Model_Import extends Mage_ImportExport_Model_Import
         $entityAdapter->setDisablePreprocessImageData($this->getDisablePreprocessImageData());
         $entityAdapter->setUnsetEmptyFields($this->getUnsetEmptyFields());
         $entityAdapter->setSymbolEmptyFields($this->getSymbolEmptyFields());
+        $entityAdapter->setIndexValueAttributes($this->getIndexValueAttributes());
         $this->setEntityAdapter($entityAdapter);
 
         $validationResult = $this->validateSource($data);

@@ -71,8 +71,23 @@ class AvS_FastSimpleImport_Model_Import_Entity_Product extends AvS_FastSimpleImp
         'custom_design',
         'country_of_manufacture',
         'base_price_unit',
-        'base_price_base_unit',
     );
+
+    /**
+     * @return array
+     */
+    public function getIndexValueAttributes()
+    {
+        return $this->_indexValueAttributes;
+    }
+
+    /**
+     * @param array $indexValueAttributes
+     */
+    public function setIndexValueAttributes($indexValueAttributes)
+    {
+        $this->_indexValueAttributes = $indexValueAttributes;
+    }
 
     /**
      * Set the error limit when the importer will stop
