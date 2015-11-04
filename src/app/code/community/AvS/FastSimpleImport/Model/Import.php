@@ -105,14 +105,39 @@ class AvS_FastSimpleImport_Model_Import extends Mage_ImportExport_Model_Import
             }
 
             if ($this->getProcessedRowsCount() > $this->getInvalidRowsCount()) {
-                if (!empty($partialIndexing)) {
+                switch($partialIndexing) {
 
-                    $this->_prepareDeletedProductsReindex();
-                    $this->importSource();
-                    $this->reindexImportedProducts();
-                } else {
-                    $this->importSource();
-                    $this->invalidateIndex();
+                    case AvS_FastSimpleImport_Model_System_Config_Source_Product_IndexingMode::INDEXING_MODE_PARTIAL:
+    
+                        $this->_prepareDeletedProductsReindex();
+                        $this->importSource();
+                        $this->reindexImportedProducts();
+                        break; 
+                        
+                    case AvS_FastSimpleImport_Model_System_Config_Source_Product_IndexingMode::INDEXING_MODE_ASYNC:
+
+                        $this->importSource();
+
+                        // disable AsyncIndex for the time of creating new index events in order to avoid locked table
+                        $autoIndexOriginalConfigValue = Mage::getStoreConfigFlag('system/asyncindex/auto_index');
+                        if ($autoIndexOriginalConfigValue) {
+                            Mage::getResourceModel('core/setup', 'core_setup')->setConfigData('system/asyncindex/auto_index', 0);
+                            Mage::app()->getCacheInstance()->cleanType('config');
+                        }
+
+                        $this->_createIndexEvents();
+
+                        // re-enable AsyncIndex
+                        if ($autoIndexOriginalConfigValue) {
+                            Mage::getResourceModel('core/setup', 'core_setup')->setConfigData('system/asyncindex/auto_index', 1);
+                            Mage::app()->getCacheInstance()->cleanType('config');
+                        }
+                        break;
+                    
+                    default:
+
+                        $this->importSource();
+                        $this->invalidateIndex();
                 }
             }
         }
@@ -608,5 +633,29 @@ class AvS_FastSimpleImport_Model_Import extends Mage_ImportExport_Model_Import
     public function getMultiselectAttributes()
     {
         return (array)$this->getData('multiselect_attributes');
+    }
+
+    /**
+     * Reindex stock indes, create index events for other product indices (for use with the AsyncIndex module)
+     *
+     * @throws Exception
+     */
+    protected function _createIndexEvents()
+    {
+        /** @var $productDummy Spet_MagentoConfiguration_Model_Catalog_Product */
+        $productDummy = Mage::getModel('catalog/product');
+
+        /** @var $indexer Mage_Index_Model_Indexer */
+        $indexer = Mage::getSingleton('index/indexer');
+
+        foreach ($this->getEntityAdapter()->getNewSku() as $importedData) {
+            $entityId = $importedData['entity_id'];
+            Mage::getResourceModel('cataloginventory/indexer_stock')->reindexProducts($entityId);
+
+            $productDummy->setId($entityId);
+
+            $indexer->logEvent($productDummy, 'catalog_product', 'save');
+            $indexer->logEvent($productDummy, 'catalog_product', 'catalog_reindex_price');
+        }
     }
 }
