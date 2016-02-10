@@ -254,9 +254,11 @@ class AvS_FastSimpleImport_Model_Import_Entity_Product_Type_Configurable
 
             foreach ($superAttributes['attributes'] as $productId => $attributesData) {
                 foreach ($attributesData as $attrId => $row) {
-                    $row['product_id']   = $productId;
-                    $row['attribute_id'] = $attrId;
-                    $mainData[]          = $row;
+                    if (intval($attrId) > 0) {
+                        $row['product_id']   = $productId;
+                        $row['attribute_id'] = $attrId;
+                        $mainData[]          = $row;
+                    }
                 }
             }
             if ($mainData) {
